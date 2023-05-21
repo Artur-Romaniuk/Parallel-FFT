@@ -3,40 +3,41 @@ use std::f64::consts::PI;
 
 pub struct Recursive {}
 use super::Fft;
+
+
 impl Recursive {
-    fn fft_recursive(input: &mut [Complex<f64>]) {
-        if input.len() <= 1 {
-            return;
-        }
-
-        let n = input.len();
-
-        let (even, odd): (Vec<_>, Vec<_>) = input.iter().enumerate().partition(|(i, _)| i % 2 == 0);
-
-        let even_values: Vec<_> = even.into_iter().map(|(_, v)| *v).collect();
-        let odd_values: Vec<_> = odd.into_iter().map(|(_, v)| *v).collect();
-
-        Recursive::fft_recursive(&mut even_values.clone());
-        Recursive::fft_recursive(&mut odd_values.clone());
-
-        let angle_step = -2.0 * PI / n as f64;
-        for k in 0..n / 2 {
-            let twiddle_factor = Complex::from_polar(1.0, angle_step * k as f64);
-            let t = twiddle_factor * odd_values[k];
-            input[k] = even_values[k] + t;
-            input[n / 2 + k] = even_values[k] - t;
-        }
+    fn fft_recursive(x: &mut [Complex<f64>]) {
+         let n = x.len();
+    if n <= 1 {
+        return;
+    }
+    
+    let mut even: Vec<Complex<f64>> = Vec::with_capacity(n / 2);
+    let mut odd: Vec<Complex<f64>> = Vec::with_capacity(n / 2);
+    
+    for i in (0..n).step_by(2) {
+        even.push(x[i]);
+        odd.push(x[i + 1]);
+    }
+    
+    Self::fft_recursive(&mut even);
+    Self::fft_recursive(&mut odd);
+    
+    for k in 0..(n / 2) {
+        let t = Complex::new(0.0, -2.0 * PI * k as f64 / n as f64).exp() * odd[k];
+        x[k] = even[k] + t;
+        x[k + n / 2] = even[k] - t;
     }
 }
-
+}
 impl Fft for Recursive {
     fn fft(input: &mut [Complex<f64>]) {
         if input.len() <= 1 {
             panic!("Input size must be greater than 1");
         }
-        if input.len() & input.len() - 1 != 0 {
+        if input.len() & (input.len() - 1) != 0 {
             panic!("Input size must be a power of 2");
         }
-        Self::fft_recursive(input);
+        Recursive::fft_recursive(input);
     }
 }
